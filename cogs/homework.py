@@ -1,3 +1,4 @@
+from decimal import Decimal
 import discord
 from discord.ext import commands
 from boto3.dynamodb.conditions import Attr
@@ -23,7 +24,6 @@ class HomeworkCog(commands.Cog):
 
         message = reaction.message
 
-        # Check for number emoji by this user
         user_number_emoji = None
         for r in message.reactions:
             if str(r.emoji) in number_emojis:
@@ -34,7 +34,6 @@ class HomeworkCog(commands.Cog):
             if user_number_emoji:
                 break
 
-        # Check for purple checkmark by this user
         user_has_purple_check = False
         for r in message.reactions:
             emoji_name = str(r.emoji).lower()
@@ -46,7 +45,6 @@ class HomeworkCog(commands.Cog):
             if user_has_purple_check:
                 break
 
-        # Only save if both are present
         if user_number_emoji and user_has_purple_check:
             assignment_number = self.get_name_of_emoji(user_number_emoji) or "manual"
 
@@ -57,34 +55,27 @@ class HomeworkCog(commands.Cog):
             )
             items = response.get('Items', [])
             if not items:
-                print(f"❌ No class found for channel {channel_id}")
                 return
+
             class_code = items[0]['classCode']
 
+            # Convert to Unix timestamp (seconds)
+            timestamp_unix = Decimal(str(int(datetime.utcnow().timestamp())))
+
             # Save to DynamoDB
-            item = {
-                "classCode": class_code,
-                "messageID": str(message.id),
-                "channelID": str(message.channel.id),
-                "studentID": str(user.id),
-                "timestamp": datetime.utcnow().isoformat(),
-                "type": "homework",
-                "assignmentNumber": assignment_number
-            }
-            try:
-                HOMEWORK_TABLE.put_item(Item=item)
-                print(f"✅ Saved homework: {item}")
-            except Exception as e:
-                print(f"❌ Failed to save homework: {e}")
-                return
+            HOMEWORK_TABLE.put_item(
+                Item={
+                    "classCode": class_code,
+                    "messageID": str(message.id),
+                    "channelID": str(message.channel.id),
+                    "studentID": str(user.id),
+                    "timestamp": timestamp_unix,  # stored as Number
+                    "type": "homework",
+                    "assignmentNumber": assignment_number
+                }
+            )
 
-            # React with thumbs up
-            try:
-                await message.add_reaction("👍🏻")
-                print("✅ Added 👍🏻 reaction")
-            except Exception as e:
-                print(f"❌ Failed to add 👍🏻: {e}")
+            await message.add_reaction("👍🏻")
 
-# Async setup
 async def setup(bot: commands.Bot):
     await bot.add_cog(HomeworkCog(bot))

@@ -29,6 +29,7 @@ async def main():
         await bot.load_extension("cogs.addcc")
         await bot.load_extension("cogs.findcc")
         await bot.load_extension("cogs.homework")
+        await bot.load_extension("cogs.loghw")
 
         # Start bot
         await bot.start(config.DISCORD_TOKEN)
