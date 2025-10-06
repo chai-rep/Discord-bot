@@ -124,11 +124,16 @@ class LogHomework(commands.Cog):
             target_channel = interaction.channel
             await interaction.followup.send("⚠️ Could not find the mapped log channel. Posting here instead.")
 
-        # Send the logbook text first
+        # Send the logbook text, handling long messages
         log_message = "\n".join(header_lines)
-        await target_channel.send(log_message)
+        if len(log_message) > 2000:
+            parts = [log_message[i:i + 2000] for i in range(0, len(log_message), 2000)]
+            for part in parts:
+                await target_channel.send(part)
+        else:
+            await target_channel.send(log_message)
 
-        #  Send image as a separate embed if available
+        # Send image as a separate embed if available
         if image_url:
             embed = discord.Embed(color=discord.Color.blue())
             embed.set_image(url=image_url)
