@@ -24,6 +24,7 @@ class HomeworkCog(commands.Cog):
 
         message = reaction.message
 
+        # Check for number emoji added by user
         user_number_emoji = None
         for r in message.reactions:
             if str(r.emoji) in number_emojis:
@@ -34,6 +35,7 @@ class HomeworkCog(commands.Cog):
             if user_number_emoji:
                 break
 
+        # Check for purple check added by user
         user_has_purple_check = False
         for r in message.reactions:
             emoji_name = str(r.emoji).lower()
@@ -45,8 +47,15 @@ class HomeworkCog(commands.Cog):
             if user_has_purple_check:
                 break
 
+        # Only proceed if user added number + purple check
         if user_number_emoji and user_has_purple_check:
-            assignment_number = self.get_name_of_emoji(user_number_emoji) or "manual"
+            # Map emoji to number
+            assignment_number_str = self.get_name_of_emoji(user_number_emoji) or "manual"
+
+            try:
+                assignment_number = int(assignment_number_str)
+            except ValueError:
+                return  # invalid emoji, ignore
 
             # Lookup class
             channel_id = str(message.channel.id)
@@ -57,24 +66,37 @@ class HomeworkCog(commands.Cog):
             if not items:
                 return
 
-            class_code = items[0]['classCode']
+            class_info = items[0]
+            class_code = class_info.get('classCode', 'unknown')
 
-            # Convert to Unix timestamp (seconds)
+            # Get total assignments
+            try:
+                total_assignments = int(class_info.get('totalAssignments', 0))
+            except (ValueError, TypeError):
+                total_assignments = 0
+
+            # Validate assignment number
+            if total_assignments and assignment_number > total_assignments:
+                # Do not save or react if invalid
+                return
+
+            # Convert timestamp to Decimal
             timestamp_unix = Decimal(str(int(datetime.utcnow().timestamp())))
 
-            # Save to DynamoDB
+            # Save to DynamoDB with poster's ID
             HOMEWORK_TABLE.put_item(
                 Item={
                     "classCode": class_code,
                     "messageID": str(message.id),
                     "channelID": str(message.channel.id),
-                    "studentID": str(user.id),
-                    "timestamp": timestamp_unix,  # stored as Number
+                    "studentID": str(message.author.id),
+                    "timestamp": timestamp_unix,
                     "type": "homework",
                     "assignmentNumber": assignment_number
                 }
             )
 
+            # Add thumbs-up reaction
             await message.add_reaction("👍🏻")
 
 async def setup(bot: commands.Bot):
