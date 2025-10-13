@@ -7,7 +7,7 @@ class FindCC(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="findcc", description="Find a class code using a role")
+    @app_commands.command(name="findcc", description="Find a class code using a role id")
     @app_commands.describe(role="The role of the class")
     async def findcc(self, interaction: discord.Interaction, role: discord.Role):
         await interaction.response.defer()
@@ -22,7 +22,7 @@ class FindCC(commands.Cog):
             class_code = items[0]["classCode"]
             await interaction.followup.send(f"✅ Class code for {role.mention} is: {class_code}")
         else:
-            await interaction.followup.send(f"❌ No class found for role: {role.mention}")
+            await interaction.followup.send(f"❌ No class set for role: {role.mention}")
 
 # ---------------- Setup ----------------
 async def setup(bot: commands.Bot):
